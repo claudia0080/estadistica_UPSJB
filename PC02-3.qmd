@@ -1,0 +1,219 @@
+---
+title: "pc02_2"
+author: "grupo_01"
+Claudia Rios Avalos
+
+Melina Godoy
+
+Leonardo Bautista Espíritu
+
+Rommel Maldonado Suárez
+
+Anguel Mendoza Mesías
+
+
+format: html
+editor: visual
+---
+
+## 1.bondad de ajustes
+
+## Cargamos paquetes
+
+```{r}
+library(rio)
+library(here)
+```
+
+## Cargamos datos
+
+```{r}
+almac_sangre <- import(here("data", "almac_sangre.csv"))
+```
+
+ocumentación de la interpretación de los métodos de regresión
+
+b\. Documentación de la aplicación de pruebas de bondad de ajuste y de al menos 1 método de regresión
+
+## Para datos continuos
+
+```{r}
+shapiro.test(almac_sangre$Volumen_prostata)
+```
+
+```{r}
+shapiro.test(almac_sangre$Tiempo_hasta_recurrencia)
+```
+
+interpretamos: Las dos hipotesis son nulas ya que los valores de P son menores a 0.05 y nunguna tiene una distribución normal
+
+## para datos categoricos
+
+```{r}
+table(almac_sangre$Historia_familiar)
+```
+
+Prueba de bondad de ajuste de Chi-cuadrado.
+
+se dice el porcentage de cancer de prostata por antecedentes familares de un 25%
+
+```{r}
+chisq.test(x = c(68, 248), p = c(0.25, 0.75))
+```
+
+dado que el valor P es mayor a 0.5 nos dice que las observaciones obserbadas nos son tan diferentes a las proporciones esperadas
+
+# 2. Regresión lineal simple
+
+Cargamos paquetes
+
+```{r}
+library(tidyverse)
+library(here)
+library(rio)
+
+install.packages("gtsummary")
+library(gtsummary)
+```
+
+2.1 histograma
+
+```{r}
+almac_sangre |>  
+  ggplot(aes(x =Volumen_prostata)) +
+  geom_histogram(
+    color = "blue",
+    ) + 
+  labs(y = "Frecuencia", 
+       x = "volumen de prostata") +
+  geom_vline(xintercept = mean(almac_sangre$Volumen_prostata, na.rm = TRUE),
+             color = "yellow", size = 1.5)
+```
+
+De estos datos el del volúmen de prostata es =56.44821
+
+```{r}
+mean(almac_sangre$Volumen_prostata, na.rm = TRUE)
+```
+
+## 2.2 Notación en el método de regresión lineal simple
+
+```{r}
+plot(Volumen_prostata ~ PSA_preoperatorio , data = almac_sangre,
+     col = "blue",
+     ylab = "volumen de prostata",
+     xlab = "PSA preoperatorio",
+     las = 1,
+     pch = 20, 
+     font.lab = 2, font.axis = 2) 
+
+# La función lm() ajusta el modelo de regresión lineal
+abline(lm(Volumen_prostata ~ PSA_preoperatorio , data = almac_sangre), lwd = 2, col = "orange")
+```
+
+## 2.3 Ajustando el modelo de regresión lineal simple para nuestro problema
+
+```{r}
+modelo_ejemplo = lm(Volumen_prostata ~ PSA_preoperatorio, data = almac_sangre)
+```
+
+Usamos sumary para ver los resultados:
+
+```{r}
+summary(modelo_ejemplo)
+#y=47.1695 + 1.1280 x +2.86
+```
+
+deacuerdo al valor P que es mas a 0.05 podemos decir de que hay una relación entre el volúmen de prostata y el PSA preoperatorio
+
+```{r}
+summary(modelo_ejemplo)$coef
+```
+
+## 2.5 ¿Cómo reportar los resultados del ajuste del modelo de regresión lineal simple?{r}
+
+```{r}
+install.packages("broom")
+library(broom)
+```
+
+```{r}
+
+theme_gtsummary_language("es")
+
+tabla_reporte <- modelo_ejemplo |> 
+  tbl_regression(intercept = T,
+                 estimate_fun = function(x) style_sigfig(x, digits = 4),
+                 pvalue_fun   = function(x) style_pvalue(x, digits = 3),
+                 label        = list(Volumen_prostata ~ "Volumen de prostata")) |>
+  modify_caption("Regresión del PSA Preoperatorio en función del Volumen de Prostata")
+
+
+tabla_reporte
+
+```
+
+```{r}
+tabla_reporte |> 
+  as_flex_table()  |> 
+  flextable::save_as_docx(path = "tabla_reporte.docx")
+
+```
+
+3 Prueba t de Student para muestras independientes
+
+```{r}
+group_by(almac_sangre, Raza_afroamericana) |> 
+  summarise()
+    count = n(),
+    mean = mean(PSA_preoperatorio, na.rm = TRUE),
+    sd = sd(PSA_preoperatorio, na.rm = TRUE)
+  )
+```
+
+## Visualización
+
+```{r}
+almac_sangre |>  
+  filter(!is.na(Raza_afroamericana)& !is.na(PSA_preoperatorio))  |> 
+  ggplot(aes(y = PSA_preoperatorio, x = Raza_afroamericana)) +
+  geom_boxplot() +
+  labs(y = "PSA preoperatorio", x = "Raza Afromericana")
+```
+
+## 3.1Pruebas preliminares para evaluar los supuestos de la prueba t de Student
+
+```{r}
+almac_sangre|> 
+  filter(Raza_afroamericana == "Sí") |> 
+  summarise(shapiro = list(shapiro.test(PSA_preoperatorio))) |> 
+  pull(shapiro)
+```
+
+```{r}
+almac_sangre|> 
+  filter(Raza_afroamericana == "No") |> 
+  summarise(shapiro = list(shapiro.test(PSA_preoperatorio))) |> 
+  pull(shapiro)
+
+```
+
+## Supuesto 2: Las varianzas de los dos grupos son iguales Para esto podemos usar la prueba F para evaluar la homogeneidad de varianzas. Esto esta implementado en la función var.test
+
+```{r}
+var.test(PSA_preoperatorio ~ Raza_afroamericana, data = almac_sangre)
+```
+
+## 
+
+si la varianza es cercana a 1 esignifica que hay mayor relacion entre ambas
+
+El valor p de la prueba F es p =0.2584 Es mayor que el nivel de significancia α = 0.05. En conclusión, no hay una diferencia significativa entre las varianzas de los dos conjuntos (son raza afromericana,no son raza afroamericana) de datos. Por lo tanto, podemos usar la prueba t clásica que asume igualdad de varianzas.
+
+## 3.2 Realizamos la prueba t para nuestros datos.
+
+```{r}
+t.test(PSA_preoperatorio ~ Raza_afroamericana, data = almac_sangre, var.equal = TRUE)
+```
+
+inerpretación: podemos concluir que el valor de p=0.03525 por lo que es menor al nivel de significacia de α = 0.05. Por lo tanto, podemos concluir que el PSA preoperatorio en personas afroamericas es diferene a las que no lo son

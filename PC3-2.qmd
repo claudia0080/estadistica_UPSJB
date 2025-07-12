@@ -1,0 +1,314 @@
+---
+title: "sem12"
+author: "GRUPO_01"
+Claudia Rios Avalos
+
+Melina Godoy
+
+Leonardo Bautista Espíritu
+
+Rommel Maldonado Suárez
+
+Anguel Mendoza Mesías
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Instalamos package
+
+```{r}
+install.packages("performance")
+```
+
+Library
+
+```{r}
+library(performance)
+library(tidyverse)
+library(here)
+library(rio)
+library(gtsummary)
+library(car)
+library(survival)
+```
+
+## 1.1 Selección automática\*\*
+
+Este método emplea algoritmos automáticos —disponibles en R— para determinar qué variables incluir en el modelo. Las técnicas automáticas de selección se basan en criterios estadísticos como los valores p o los coeficientes de regresión.
+
+Los algoritmos difieren principalmente en la estrategia,Dependiendo de la dirección del algoritmo (forward, backward o stepwise), el resultado será un subconjunto seleccionado de variables.términos simples, ***cuanto menor sea el valor del AIC, mejor es el modelo en términos de equilibrio entre ajuste y complejidad.***
+
+En regresión, una herramienta común para detectar multicolinealidad es el Factor de Inflación de la Varianza (VIF, por sus siglas en inglés). De manera general, se interpreta así:
+
+-   VIF de 1 indica que no hay multicolinealidad.
+-   VIF entre 1 y 5 sugiere una multicolinealidad moderada.
+-   VIF superior a 5 o 10 indica una multicolinealidad alta que puede requerir atención.
+
+1.2.2 Selección intencionada de variables
+
+## 1.2 Selección intencionada de variables
+
+La selección intencionada de variables sigue una serie de pasos que combinan criterios estadísticos y consideraciones clínicas. Estos pasos incluyen:
+
+-   Evaluación univariada de variables: Se realiza un análisis univariado para cada variable independiente con respecto a la variable de desenlace. Las variables que presentan una asociación estadísticamente significativa (habitualmente con un valor de p menor a 0.20) o que son consideradas clínicamente relevantes se seleccionan para su inclusión inicial en el modelo multivariado, independientemente de su significancia estadística.
+
+-   Comparación de modelos multivariados: Las variables seleccionadas se incluyen en un modelo multivariado preliminar. A partir de este modelo, las variables que no alcanzan un nivel de significancia estadística estricto (por ejemplo, p \> 0.05) pueden ser consideradas para eliminación. Posteriormente, se comparan el modelo original (con todas las variables) y el modelo reducido (con las variables eliminadas) para evaluar si la simplificación del modelo afecta negativamente su capacidad explicativa o predictiva. Esta comparación puede realizarse mediante pruebas como la de razón de verosimilitud (Likelihood Ratio Test) o criterios de información (AIC/BIC).
+
+-   Evaluación de interacciones: Es importante explorar posibles términos de interacción entre variables que, en combinación, podrían modificar el efecto sobre el desenlace.
+
+## 2 Ejemplos de análisis univariado y multivariado en una regresión logística
+
+## 2.1 El dataset para este ejercicio
+
+```{r}
+almac_sangre01<- import(here("data", "almac_sangre.csv"))
+```
+
+vistazo de datos
+
+```{r}
+head(almac_sangre01)
+```
+
+## 
+
+## 2.2 El analisis univariado
+
+En esta sección se estimarán los Odds Ratios (OR) de cada variable de manera independiente, es decir, sin ajuste por otras covariables.
+
+```{r}
+almac_sangre01 <- almac_sangre |> 
+  mutate(Raza_afroamericana = relevel(as.factor(Raza_afroamericana), ref = "No"),
+         Estadio_T = relevel(as.factor(Estadio_T), ref = "T2b-T3"),
+         Historia_familiar = relevel(as.factor(Historia_familiar), ref = "Sí")) |> 
+  na.omit()
+```
+
+Para obtener la tabla con los resultados del análisis univariado, se utiliza la función `tbl_uvregression()`, que permite generar tablas con las estimaciones de regresión logística para cada variable incluida.
+
+```{r}
+tabla_reg_log_univ <- almac_sangre01 |>
+  tbl_uvregression(
+    include = c(Edad_mediana_GR, Estadio_T, Raza_afroamericana, Edad,Grupo_edad_GR,Volumen_prostata,Volumen_tumoral,Estadio_T,Gleason_biopsia,Confinamiento_organo,PSA_preoperatorio,Terapia_previa,Unidades_transfundidas,Gleason_quirurgico,Terapia_adyuvante,Recurrencia_bioquimica,Censor,Tiempo_hasta_recurrencia,BN_positivo),
+    y = Historia_familiar,
+    method = glm,
+    method.args = list(family = binomial),
+    exponentiate = TRUE,
+    conf.int = TRUE,
+    hide_n = TRUE,
+    add_estimate_to_reference_rows = FALSE,
+    pvalue_fun = ~ style_pvalue(.x, digits = 3),
+    estimate_fun = ~ style_number(.x, digits = 2),
+    label = list(
+      Edad_mediana_GR ~ "Edad Mediana GR", Estadio_T ~"Estadio T", Raza_afroamericana ~"Raza Afroamericana", Edad ~ "Edad (años)",Grupo_edad_GR ~ "Grupo de Edad GR",Volumen_prostata ~ "Volumen de Prostata",Volumen_tumoral ~ "Volumen Tumoral",Estadio_T ~ "Estadio T",Gleason_biopsia ~ "Gleason BIopsia",Confinamiento_organo ~ "Confinamiento de Organo",PSA_preoperatorio ~ "PSA Preoperatorio",Terapia_previa ~ "Terapia Previa",Unidades_transfundidas ~ "Unidades Transfundidas",Gleason_quirurgico ~ "Gleason Quirurgico",Terapia_adyuvante ~ "Terapia Adyudante",Recurrencia_bioquimica ~ "Recurencia Bioquimica",Censor ~ "Censor",Tiempo_hasta_recurrencia ~ "Tiempo hasta recurrencia",BN_positivo ~ "BN Positivo")
+  ) |>
+  bold_labels() |>
+  bold_p(t = 0.05) |>
+  modify_header(estimate = "**OR no ajustado**", p.value = "**Valor P**")
+```
+
+En esta tabla, los resultados se expresan como odds ratios no ajustados (OR) con sus respectivos intervalos de confianza al 95% y valores p.
+
+```{r}
+tabla_reg_log_univ
+```
+
+interpretar resultados:
+
+-   **RR (IC 95%)** *(o OR si es logística)*:
+
+    -   **RR**: Riesgo relativo (en Poisson).
+
+        Un valor \> 1 indica mayor riesgo del evento.
+
+        Un valor \< 1 indica menor riesgo.
+
+        **IC 95%**: Si no incluye al 1, el resultado es estadísticamente significativo.
+
+**p-value**:
+
+-   Valor de significancia estadística.
+
+    Si **p \< 0.05**, se considera que hay evidencia estadística de asociación.
+
+    RECURRENCIA BIOQUIMICA
+
+-   OR =2.68
+
+    Las personas con recurrencia bioquímica tienen **2.68 veces más riesgo (o probabilidad)** de presentar el evento que estás midiendo (posiblemente progresión, muerte, etc.) comparado con quienes **no** tienen recurrencia.
+
+-   Valor p=0.047
+
+    hay asociación signifcativa (p\<0.05) justo en el limite
+
+    CENSOR
+
+-   **RR/OR = 0.37**:
+
+    Las personas censuradas tienen un 63% menos de riesgo/probabilidad del evento en comparación con las no censuradas.
+
+-   Valor p=0.047
+
+hay asociación signifcativa (p\<0.05) justo en el limite
+
+## 2.3 El analisis Multivariado
+
+Para el análisis de regresión logística multivariada, se aplicó una estrategia de selección automática de variables utilizando tres enfoques: eliminación hacia atrás (*backward elimination*), selección hacia adelante (*forward selection*) y selección paso a paso (*stepwise selection)*.
+
+**Paso 1. Ajuste del modelo inicial**
+
+Ajustamos un modelo de regresión logística binaria que incluya todas las variables candidatas
+
+```{r}
+var_modelo <- glm(
+  Historia_familiar ~ Edad_mediana_GR + Estadio_T + Raza_afroamericana + Edad + Grupo_edad_GR + Volumen_prostata + Volumen_tumoral + Gleason_biopsia + Confinamiento_organo + PSA_preoperatorio + Terapia_previa + Unidades_transfundidas + Gleason_quirurgico + Terapia_adyuvante + Recurrencia_bioquimica + Censor + Tiempo_hasta_recurrencia + BN_positivo,
+  data = almac_sangre01,
+  family = binomial(link = "logit")
+)
+```
+
+Paso 2a. Realizamos la selección de variables\*\* usando la técnica Eliminación hacia atrás (Backward elimination).
+
+```{r}
+multi_backward <- var_modelo |>
+  step(direction = "backward", trace = FALSE)
+```
+
+Paso 2b. Realizamos la selección de variables\*\* usando la técnica Selección hacia adelante (Forward selection).
+
+```{r}
+multi_forward <- var_modelo |>
+  step(direction = "forward", trace = FALSE)
+```
+
+Paso 3c. Realizamos la selección de variables\*\* usando la técnica Selección paso a paso (Stepwise selection).
+
+```{r}
+multi_stepwise <- var_modelo |>
+  step(direction = "both", trace = FALSE)
+```
+
+Los resultados de la selección de las variables para el modelo se han guardado en los objetos: multi_backward, multi_forward, y multi_stepwise. El siguiente paso es comparar los valores de AIC y la multicolinealidad entre las variables seleccionadas por cada uno de los modelos.
+
+```{r}
+summary(multi_backward)
+```
+
+```{r}
+summary(multi_forward)
+```
+
+```{r}
+summary(multi_stepwise)
+```
+
+## 2.4 Conclusión
+
+-   **Un AIC más bajo es mejor**.
+
+Los modelos obtenidos mediante eliminación hacia atrás (backward elimination) y selección paso a paso (stepwise selection) presentaron el menor valor de AIC (299.8 y 299.4), indicando un mejor ajuste en comparación con el modelo generado mediante selección hacia adelante (forward selection). Además, ambos modelos seleccionaron el mismo conjunto de variables. Por el contrario, la técnica de selección hacia adelante mantuvo todas las variables originales, lo que resultó en un modelo más complejo sin mejorar el AIC.
+
+## 2.5 Evaluación de colinealidad
+
+Finalmente, evaluamos la colinealidad usando la función `check_collinearity()` del paquete `performance`.
+
+```{r}
+performance::check_collinearity(multi_backward, ci = NULL)
+```
+
+```{r}
+performance::check_collinearity(multi_forward, ci = NULL)
+```
+
+```{r}
+performance::check_collinearity(multi_stepwise, ci = NULL)
+```
+
+## 2.6 Conclución
+
+Los modelos generados mediante eliminación hacia atrás (backward elimination) y selección paso a paso (stepwise selection) mostraron valores de VIF bajos y cercanos a 1, lo que indica una baja colinealidad entre las variables incluidas.
+
+En cambio, el modelo obtenido con la técnica de selección hacia adelante (forward selection) presentó valores de VIF relativamente elevados para las variables Edad_mediana_GR (VIF=2.94), Estadio_T(VIF=1.72), Grupo_edad_GR (VIF=3.07), Volumen_prostata (VIF=1.62), Volumen_tumoral (VIF=1.93), Gleason_biopsia (VIF=2.66), Confinamiento_organo (VIF=1.57), Terapia_previa (VIF=1.85), Gleason_quirurgico (VIF=2.98). Este hallazgo es esperable, dado que las variables miden componentes relacionados al **cáncer de prostata**, lo que sugiere redundancia y posible colinealidad. Esta relación podría explicar por qué estas variables fueron descartadas durante los otros procedimientos de selección automática, con el objetivo de optimizar el modelo y reducir la multicolinealidad. De hecho, ninguna de estas dos variables fue retenida en los modelos seleccionados mediante backward o stepwise.
+
+## 2.7 Modelo final
+
+Con base en los resultados de ajuste (AIC) y la evaluación de colinealidad (VIF), se concluye que el modelo óptimo es el obtenido mediante las técnicas de eliminación hacia atrás (backward elimination) o selección paso a paso (stepwise selection), dado que ambos produjeron exactamente el mismo conjunto de variables.
+
+El modelo final incluye un total de cuatro variables independientes, las cuales serán reportadas en el análisis multivariado definitivo.
+
+## 3. Reporte del análisis univariado y multivariado
+
+Como en las sesiones anteriores, reportaremos los resultados del modelo final de regresión logística.
+
+Tabla para los resultados de la regresión univariado (no ajustado)
+
+```{r}
+tabla_univ <- almac_sangre01 |>
+  tbl_uvregression(
+    include = c(Edad_mediana_GR, Estadio_T, Raza_afroamericana, Edad,Grupo_edad_GR,Volumen_prostata,Volumen_tumoral,Estadio_T,Gleason_biopsia,Confinamiento_organo,PSA_preoperatorio,Terapia_previa,Unidades_transfundidas,Gleason_quirurgico,Terapia_adyuvante,Recurrencia_bioquimica,Censor,Tiempo_hasta_recurrencia,BN_positivo),
+    y = Historia_familiar,
+    method = glm,
+    method.args = list(family = binomial),
+    exponentiate = TRUE,
+    conf.int = TRUE,
+    hide_n = TRUE,
+    add_estimate_to_reference_rows = FALSE,
+    pvalue_fun = ~ style_pvalue(.x, digits = 3),
+    estimate_fun = ~ style_number(.x, digits = 2),
+    label = list(
+      Edad_mediana_GR ~ "Edad Mediana GR", Estadio_T ~"Estadio T", Raza_afroamericana ~"Raza Afroamericana", Edad ~ "Edad (años)",Grupo_edad_GR ~ "Grupo de Edad GR",Volumen_prostata ~ "Volumen de Prostata",Volumen_tumoral ~ "Volumen Tumoral",Estadio_T ~ "Estadio T",Gleason_biopsia ~ "Gleason BIopsia",Confinamiento_organo ~ "Confinamiento de Organo",PSA_preoperatorio ~ "PSA Preoperatorio",Terapia_previa ~ "Terapia Previa",Unidades_transfundidas ~ "Unidades Transfundidas",Gleason_quirurgico ~ "Gleason Quirurgico",Terapia_adyuvante ~ "Terapia Adyudante",Recurrencia_bioquimica ~ "Recurencia Bioquimica",Censor ~ "Censor",Tiempo_hasta_recurrencia ~ "Tiempo hasta recurrencia",BN_positivo ~ "BN Positivo"
+      
+    )
+  ) |>
+  bold_labels() |>
+  bold_p(t = 0.05) |>
+  modify_header(estimate = "**OR**", p.value = "**Valor P**")
+```
+
+Tabla para los resultados de la regresión multivariable (ajustado)
+
+```{r}
+
+tabla_multi <- glm(
+  Historia_familiar ~ Raza_afroamericana + Edad + Recurrencia_bioquimica + Tiempo_hasta_recurrencia,
+  family = binomial(link = "logit"),
+  data = almac_sangre01
+) |>
+  tbl_regression(
+    exponentiate = TRUE,
+    conf.int = TRUE,
+    pvalue_fun = ~ style_pvalue(.x, digits = 3),
+    estimate_fun = ~ style_number(.x, digits = 2),
+    label = list(
+      Raza_afroamericana ~ "Raza Afroamericana",
+      Edad ~ "Edad",
+      Recurrencia_bioquimica ~ "Recurrencia Bioquimica",
+     Tiempo_hasta_recurrencia ~ "Tiempo de Recurrencia"
+    )
+  ) |>
+  bold_labels() |>
+  bold_p(t = 0.05) |>
+  modify_header(estimate = "**OR**", p.value = "**Valor P**")
+```
+
+La tabla final la construimos usando la función `tbl_merge()`. De modo que la tabla del análisis univariado o no ajustado y multivariado o ajustado, se muestren lado a lado.
+
+```{r}
+tabla_final <- 
+  tbl_merge(
+    list(tabla_univ, tabla_multi),
+    tab_spanner = c("**Univariado**", "**Multivariado**")
+  )
+```
+
+```{r}
+tabla_final
+```
+
+## 3.1 Conclución
+
+En el modelo de regresión logística ajustado, recurrencia_bioquimica y censor se asociaron de manera significativa con la Historia familiar. Las personas con recurrencia bioquímica tienen 3 veces más probabilidades del evento (ej. historia familiar), ajustado por el resto, en el caso de censor Las personas censuradas tienen 63% menos probabilidades del evento, también ajustado.

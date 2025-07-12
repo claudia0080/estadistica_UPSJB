@@ -1,0 +1,231 @@
+---
+title: "Quarto_PC2"
+author: "grupo_01"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Liberamos paquetes
+
+```{r}
+library(tidyverse)
+library(rio)
+library(here)
+library(gridExtra)
+library(GGally)
+library(forcats)
+```
+
+# cargamos datos
+
+```{r}
+data_sangre_0 <- import(here("data","almac_sangre.csv"))
+```
+
+## Examinamos los datos
+
+```{r}
+str(data_sangre_0)
+```
+
+## Conversión de caracteres a factor (categóricos) usando la función `mutate_if()`
+
+```{r}
+data_sangre <- data_sangre_0 |> 
+  mutate_if(is.character, as.factor)
+str(data_sangre)
+```
+
+# Visualizando distribución de datos
+
+# 1. Visualizando datos categóricos
+
+```{r}
+data_sangre %>%  
+  ggplot(aes(x = Grupo_edad_GR, fill = Grupo_edad_GR)) +
+  geom_bar()
+
+#data_sangre |>  
+ # ggplot(aes(x = Grupo_edad_GR) +
+ # geom_bar()
+```
+
+```{r}
+data_sangre |>  
+  ggplot(aes(x = Raza_afroamericana)) +
+  geom_bar()
+```
+
+-   Aquí, añadimos la función `fct_infreq()  para ordenar de orden decreciente`
+
+    ```{r}
+    data_sangre |>  
+      ggplot(aes(x = fct_infreq(Grupo_edad_GR))) +
+      geom_bar()
+    ```
+
+```{r}
+data_sangre |>  
+  ggplot(aes(x = fct_infreq(Raza_afroamericana))) +
+  geom_bar()
+```
+
+`labs()` podemos añadir nombres a los ejes del gráficos.
+
+```{r}
+data_sangre |>  
+  ggplot(aes(x = fct_infreq(Grupo_edad_GR))) +
+  geom_bar() +
+  labs(y = "Frecuencia", x = "Grupo de edad")
+```
+
+```{r}
+data_sangre |>  
+  ggplot(aes(x = fct_infreq(Raza_afroamericana))) +
+  geom_bar() +
+  labs(y = "Frecuencia", x = "Raza afroamericana")
+```
+
+Para el gráfico de barra podemos usar frecuencias relativas. Nota que seguida a `y =` se muestra el cálculo para convertir los conteos a proporciones.
+
+```{r}
+data_sangre |>  
+  ggplot(aes(x = Grupo_edad_GR, y = ..count../sum(after_stat(count)))) +
+  geom_bar() +
+  labs(y = "Porcentaje", x = "Grupo de edad")
+```
+
+```{r}
+data_sangre |>  
+  ggplot(aes(x =Raza_afroamericana, y = ..count../sum(after_stat(count)))) +
+  geom_bar() +
+  labs(y = "Porcentaje", x = "Raza Afroamericana")
+```
+
+# 2. Visualizando Datos Numéricos
+
+## 2.1. Con histogramas
+
+```{r}
+data_sangre |>  
+  ggplot(aes(x = Volumen_prostata)) +
+  geom_histogram() +
+  labs(y = "Frecuencia", x = "volumen de prosta (ml)")
+```
+
+Un histograma de proporciones. Aquí `..density..` es la estimación de densidad que reemplaza al conteo crudo. Toda el area del gráfico de densidad suma 1.
+
+```{r}
+data_sangre  |>  
+  ggplot(aes(x = Volumen_prostata)) +
+  geom_histogram(aes(y = ..density..)) +
+  labs(y = "Density", x = "volumen de prostata (ml)")
+```
+
+visualizar gráficos de lado a lado. Aquí dos histogramas lado a lado usando la función `grid.arrange()`
+
+```{r}
+hist_1 = data_sangre |> ggplot(aes(x = Volumen_prostata)) +
+  geom_histogram() +
+  labs(y = "Frecuencia", x = "volumen de prostata (ml)")
+
+hist_2 = data_sangre  |>  
+  ggplot(aes(x = Volumen_prostata)) +
+  geom_histogram(aes(y = ..density..)) +
+  labs(y = "Density", x = "volumen de prostata (ml))")
+```
+
+```{r}
+grid.arrange(hist_1, hist_2, ncol = 2)
+```
+
+```{r}
+grid.arrange(hist_1, hist_2, ncol = 1)
+```
+
+Conteo con un número de barras distinto
+
+usando el argumento bins dentro de la función `geom_histogram()`
+
+```{r}
+data_sangre |>  
+  ggplot(aes(x = Volumen_prostata)) +
+  geom_histogram(bins = 10) +
+  labs(y = "Frecuencia", x = " volumen de prostata (ml)")
+```
+
+Modificando los colores de las barras del histograma.
+
+```{r}
+data_sangre |>  
+  ggplot(aes(x = Volumen_prostata)) +
+  geom_histogram(color = "white", 
+    fill = "purple") +
+  labs(y = "Frecuencia", x = " Volumen de prostata (ml)")
+```
+
+Modificando color en gráficos de barras. Nota que aquí, usamos el argumento fill para colorear las barras pertenecientes a las categorías.
+
+```{r}
+data_sangre |>  
+  ggplot(aes(x = fct_infreq(Raza_afroamericana), fill = Raza_afroamericana)) +
+  geom_bar() +
+  labs(y = "Frecuencia", x = "Raza Afroamericana")
+```
+
+```{r}
+data_sangre |>  
+  ggplot(aes(x = fct_infreq(Grupo_edad_GR), fill = Grupo_edad_GR)) +
+  geom_bar() +
+  labs(y = "Frecuencia", x = "Grupo de edad media")
+```
+
+## 2.2. Con Boxplots (gráfico de cajas y bigotes)
+
+usamos la función `geom_boxplot()`
+
+```{r}
+data_sangre |> 
+  ggplot(aes(y = PSA_preoperatorio)) + 
+  geom_boxplot() +
+  theme(axis.text.x  = element_blank(),
+        axis.ticks.x = element_blank()) +
+  labs(y = "PSA Preoperatorio (n/ml)")
+```
+
+La función nativa de R, `boxplot()`, permite realizar el mismo gráfico.
+
+```{r}
+box_album_base = boxplot(data_sangre$PSA_preoperatorio,
+                         ylab = "PSA preoperatorio (n/ml)",
+                         horizontal = TRUE, 
+                         col = "orange")
+```
+
+# 3. Visualizando variables categóricas *versus* categóricas
+
+```{r}
+data_sangre |> 
+  ggplot(aes(x = Estadio_T, fill = Terapia_previa)) +
+  geom_bar(position = "dodge") +
+  labs(y = "Frecuencia",  
+       x = "Estadio T",
+       fill = "Terapia")
+```
+
+```{r}
+data_sangre |>   
+  group_by(Estadio_T, Terapia_previa)  |>  
+  count() |>   
+  group_by(Estadio_T) |>   
+  mutate(Proportion = n/sum(n))  |> 
+  ggplot(aes(x = Estadio_T, y = Proportion, fill = Terapia_previa)) +
+  geom_bar(position = 'dodge', stat = 'identity') +
+  labs(y = "Proportion",
+       x = "Estadio T",
+       fill = "Terapia previa")
+```
